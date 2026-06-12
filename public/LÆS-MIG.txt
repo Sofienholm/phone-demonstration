@@ -1,0 +1,19 @@
+LÆG DINE TO AR-FILER HER (i public/):
+
+1. kvi4.glb      <- din 3D-model af kvitteringen (med animation)
+2. targets.mind  <- den kompilerede markør (se nedenfor)
+
+De bliver serveret på / så koden henter dem som:
+  /kvi4.glb
+  /targets.mind
+
+SÅDAN LAVER DU targets.mind:
+1. Vælg/lav et markør-billede med MASSER af detaljer/kontrast
+   (et foto eller plakat virker — IKKE en ensfarvet eller simpel figur).
+2. Gå til MindAR's online compiler:
+   https://hiukim.github.io/mind-ar-js-doc/tools/compile/
+3. Upload billedet -> tryk "Start" -> "Download" -> du får targets.mind
+4. Læg targets.mind i denne mappe (public/).
+5. Print markøren ELLER vis den på en anden skærm under eksamen.
+
+Slet gerne denne fil bagefter.
