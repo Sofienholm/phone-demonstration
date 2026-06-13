@@ -1,0 +1,78 @@
+/* ───────── Slutskærm (matcher mockup) ─────────
+   Farver og tekststørrelser er samlet her, så du nemt kan justere. */
+
+.final {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow-y: auto; /* så alt kan ses på små skærme */
+  background: #d7d5cf; /* varm lys grå baggrund */
+  color: #cf6a2b;
+  padding: 48px 32px 64px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  animation: final-fade 0.6s ease both; /* blødt indtoning */
+}
+
+@keyframes final-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.final__atom {
+  position: absolute;
+  top: 28px;
+  left: 18px;
+  width: 46px;
+  height: 46px;
+  opacity: 0.6;
+}
+
+.final__title {
+  margin: 24px 0 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 800;
+  font-size: 46px;
+  line-height: 1.0;
+  letter-spacing: 0.5px;
+  color: #c8551f; /* brændt orange */
+}
+
+.final__image-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.final__image {
+  max-width: 70%;
+  height: auto;
+  transform: rotate(6deg); /* let skævt som i mockup */
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.18));
+}
+
+.final__subtitle {
+  margin: 8px 0 0;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: 1px;
+  color: #e0992f; /* gylden orange */
+}
+
+.final__body {
+  margin: 0;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.45;
+  letter-spacing: 0.8px;
+  color: #e0992f;
+  opacity: 0.95;
+}

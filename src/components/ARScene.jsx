@@ -17,10 +17,10 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
  *  - onReady(): kamera + model klar
  *  - onTap():   brugeren tappede på modellen
  */
-export default function ARScene({ onReady, onTap }) {
+export default function ARScene({ onReady, onTap, onFinished }) {
   const containerRef = useRef(null)
-  const cb = useRef({ onReady, onTap })
-  cb.current = { onReady, onTap }
+  const cb = useRef({ onReady, onTap, onFinished })
+  cb.current = { onReady, onTap, onFinished }
 
   useEffect(() => {
     // ══════════════════════════════════════════════════════════════════
@@ -34,7 +34,7 @@ export default function ARScene({ onReady, onTap }) {
       skala: 0.5, // modellens størrelse (samme på alle akser)
 
       // --- SLUT (kvitteringens position EFTER man tapper) ---
-      slutAfstand: 1.0, // meter fra kameraet (mindre tal = tættere på)
+      slutAfstand: 1.6, // meter fra kameraet (mindre tal = tættere på)
       slutForskydX: 0.0, // sidelæns: + = mod højre, - = mod venstre
       slutForskydY: 0.2, // lodret:  + = op,        - = ned
 
@@ -62,6 +62,7 @@ export default function ARScene({ onReady, onTap }) {
     const targetQuat = new THREE.Quaternion()
     const _aim = new THREE.Object3D() // hjælpeobjekt til at beregne rotation
     let moving = false
+    let tapped = false // så man ikke kan tappe flere gange
 
     // --- Gyroskop-state ---
     let deviceOrientation = null
@@ -98,6 +99,9 @@ export default function ARScene({ onReady, onTap }) {
       raycaster.setFromCamera(pointer, camera)
       const hits = raycaster.intersectObject(model, true)
       if (hits.length > 0) {
+        if (tapped) return // allerede tappet — ignorér flere tryk
+        tapped = true
+
         // ===== KVITTERINGENS SLUTPOSITION beregnes her =====
         // (styres af SETTINGS.slut* ovenfor — du behøver ikke røre koden her)
 
@@ -145,6 +149,11 @@ export default function ARScene({ onReady, onTap }) {
 
         playAnimation()
         cb.current.onTap?.()
+
+        // Hvis GLB'en ikke har en animation, så vis slutskærmen efter glidet
+        if (!action) {
+          setTimeout(() => cb.current.onFinished?.(), 1500)
+        }
       }
     }
 
@@ -236,6 +245,8 @@ export default function ARScene({ onReady, onTap }) {
         action = mixer.clipAction(gltf.animations[0])
         action.loop = THREE.LoopOnce // afspil én gang (sæt THREE.LoopRepeat for at gentage)
         action.clampWhenFinished = true // bliv stående på sidste frame
+        // Når åbne-animationen er færdig -> vis slutskærmen
+        mixer.addEventListener('finished', () => cb.current.onFinished?.())
       }
 
       window.addEventListener('deviceorientation', onDeviceOrientation)

@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import ARScene from './components/ARScene.jsx'
 import Overlay from './components/Overlay.jsx'
+import FinalScreen from './components/FinalScreen.jsx'
 import './App.css'
 
 export default function App() {
   const [started, setStarted] = useState(false) // brugeren har trykket START
   const [ready, setReady] = useState(false) // kamera + model klar
   const [tapped, setTapped] = useState(false) // modellen er blevet tappet
+  const [finished, setFinished] = useState(false) // animationen er færdig -> slutskærm
 
   const handleStart = async () => {
     // iOS 13+ kræver at vi beder om bevægelses-sensoren INDE i et tap
@@ -21,13 +23,14 @@ export default function App() {
     setStarted(true)
   }
 
+  // 1) START-skærm
   if (!started) {
     return (
       <div className="start-screen">
         <h1>AR-kvittering</h1>
         <p>
           Tryk for at starte kameraet. Hold telefonen op — så ligger
-          kvitteringen ca. en meter foran dig.
+          kvitteringen ca. to meter foran dig.
         </p>
         <button type="button" className="start-button" onClick={handleStart}>
           START
@@ -36,9 +39,19 @@ export default function App() {
     )
   }
 
+  // 3) SLUTSKÆRM (når kvitteringen er åbnet) — erstatter AR'en og slukker kameraet
+  if (finished) {
+    return <FinalScreen />
+  }
+
+  // 2) AR-visning
   return (
     <>
-      <ARScene onReady={() => setReady(true)} onTap={() => setTapped(true)} />
+      <ARScene
+        onReady={() => setReady(true)}
+        onTap={() => setTapped(true)}
+        onFinished={() => setFinished(true)}
+      />
       <Overlay tapped={tapped} />
       {!ready && (
         <div className="loading">
