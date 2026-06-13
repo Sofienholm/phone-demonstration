@@ -6,9 +6,12 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
  * Markerløs AR (3DOF):
  *  - Kameraet vises som baggrund (getUserMedia).
  *  - three-kameraet roteres af telefonens gyroskop (deviceorientation).
- *  - Modellen placeres ÉN gang ca. 1 meter foran dig og bliver liggende
- *    i rummet — drejer du telefonen væk og tilbage, er den der stadig.
- *  - Tap PÅ modellen afspiller GLB-animationen.
+ *  - Modellen placeres ÉN gang foran dig og bliver liggende i rummet —
+ *    drejer du telefonen væk og tilbage, er den der stadig.
+ *  - Tap PÅ modellen: afspiller animationen OG glider tæt på, vendt mod dig.
+ *
+ *  >>> Alle tal du normalt vil ændre (afstand, størrelse, slutposition osv.)
+ *      ligger samlet i SETTINGS-blokken lige inde i useEffect nedenfor. <<<
  *
  * Props:
  *  - onReady(): kamera + model klar
@@ -20,6 +23,24 @@ export default function ARScene({ onReady, onTap }) {
   cb.current = { onReady, onTap }
 
   useEffect(() => {
+    // ══════════════════════════════════════════════════════════════════
+    //  JUSTÉR HER  —  alle de tal du normalt vil pille ved, samlet ét sted.
+    //  Ret tallet, gem, kør "npm run build" og redeploy.
+    // ══════════════════════════════════════════════════════════════════
+    const SETTINGS = {
+      // --- START (hvor modellen ligger FØR man tapper) ---
+      startAfstand: 2.0, // meter foran dig (større tal = længere væk)
+      startHoejde: -0.2, // højde: negativt = lavere, positivt = højere
+      skala: 0.5, // modellens størrelse (samme på alle akser)
+
+      // --- SLUT (kvitteringens position EFTER man tapper) ---
+      slutAfstand: 0.6, // meter fra kameraet (mindre tal = tættere på)
+      slutForskydX: 0.0, // sidelæns: + = mod højre, - = mod venstre
+      slutForskydY: 0.7, // lodret:  + = op,        - = ned
+      slutDrejGrader: 0, // drej modellen hvis den vender forkert (prøv 180)
+      glideHastighed: 0.12, // hvor hurtigt den glider hen (0.05 = blødt, 0.3 = hurtigt)
+    }
+
     const container = containerRef.current
     let renderer, scene, camera
     let mixer = null
@@ -72,14 +93,38 @@ export default function ARScene({ onReady, onTap }) {
       raycaster.setFromCamera(pointer, camera)
       const hits = raycaster.intersectObject(model, true)
       if (hits.length > 0) {
-        // Flyt modellen hen ca. 0,6 m lige foran kameraet, vendt mod dig
+        // ===== KVITTERINGENS SLUTPOSITION beregnes her =====
+        // (styres af SETTINGS.slut* ovenfor — du behøver ikke røre koden her)
+
+        // Retning fra kameraet: "frem", "højre" og "op" lige nu
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
-        targetPos.copy(forward.multiplyScalar(0.6))
+        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion)
+        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion)
+
+        // Slutposition = frem * afstand + sidelæns + lodret forskydning
+        targetPos
+          .set(0, 0, 0)
+          .addScaledVector(forward, SETTINGS.slutAfstand)
+          .addScaledVector(right, SETTINGS.slutForskydX)
+          .addScaledVector(up, SETTINGS.slutForskydY)
+
+        // Vend modellen mod dig (mod kameraet i origo)
         _aim.position.copy(targetPos)
         _aim.up.set(0, 1, 0)
-        _aim.lookAt(0, 0, 0) // origo = kameraet
+        _aim.lookAt(0, 0, 0)
         targetQuat.copy(_aim.quaternion)
-        moving = true
+
+        // Ekstra drejning hvis kvitteringen vender forkert (SETTINGS.slutDrejGrader)
+        if (SETTINGS.slutDrejGrader !== 0) {
+          targetQuat.multiply(
+            new THREE.Quaternion().setFromAxisAngle(
+              new THREE.Vector3(0, 1, 0),
+              THREE.MathUtils.degToRad(SETTINGS.slutDrejGrader),
+            ),
+          )
+        }
+
+        moving = true // sætter glide-bevægelsen i gang (sker i loop())
 
         playAnimation()
         cb.current.onTap?.()
@@ -105,19 +150,20 @@ export default function ARScene({ onReady, onTap }) {
         setCameraQuaternion(camera.quaternion, deviceOrientation, screenOrientation)
       }
 
-      // Placér modellen én gang, 1 m foran den retning kameraet pegede ved start
+      // Placér modellen én gang foran den retning kameraet pegede ved start
+      // (afstand/højde styres af SETTINGS.startAfstand / startHoejde)
       if (!placed && model && (deviceOrientation || allowFallbackPlace)) {
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
-        model.position.copy(forward.multiplyScalar(2.0)) // 2.0 = ca. 2 meter
-        model.position.y -= 0.2 // lidt under øjenhøjde
+        model.position.copy(forward.multiplyScalar(SETTINGS.startAfstand))
+        model.position.y += SETTINGS.startHoejde
         model.visible = true
         placed = true
       }
 
-      // Glid hen foran kameraet når man har tappet
+      // Glid hen til slutpositionen når man har tappet (hastighed = SETTINGS.glideHastighed)
       if (moving && model) {
-        model.position.lerp(targetPos, 0.12)
-        model.quaternion.slerp(targetQuat, 0.12)
+        model.position.lerp(targetPos, SETTINGS.glideHastighed)
+        model.quaternion.slerp(targetQuat, SETTINGS.glideHastighed)
         if (model.position.distanceTo(targetPos) < 0.01) {
           model.position.copy(targetPos)
           model.quaternion.copy(targetQuat)
@@ -159,18 +205,20 @@ export default function ARScene({ onReady, onTap }) {
       dir.position.set(1, 2, 1)
       scene.add(dir)
 
-      // Model
+      // Model — henter /kvi4.glb fra public-mappen
       const gltf = await new GLTFLoader().loadAsync('/kvi4.glb')
       model = gltf.scene
-      model.scale.set(0.5, 0.5, 0.5) // juster hvis den er for stor/lille
-      model.visible = false // skjult indtil den placeres
+      model.scale.setScalar(SETTINGS.skala) // størrelse (SETTINGS.skala ovenfor)
+      model.visible = false // skjult indtil den placeres i loop()
       scene.add(model)
 
+      // Forbered animationen. Vi bruger den FØRSTE animation i filen.
+      // Har din GLB flere, og du vil have en anden: skift [0] til fx [1].
       if (gltf.animations.length > 0) {
         mixer = new THREE.AnimationMixer(model)
         action = mixer.clipAction(gltf.animations[0])
-        action.loop = THREE.LoopOnce
-        action.clampWhenFinished = true
+        action.loop = THREE.LoopOnce // afspil én gang (sæt THREE.LoopRepeat for at gentage)
+        action.clampWhenFinished = true // bliv stående på sidste frame
       }
 
       window.addEventListener('deviceorientation', onDeviceOrientation)
