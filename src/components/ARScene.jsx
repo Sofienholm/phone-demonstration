@@ -36,8 +36,8 @@ export default function ARScene({ onReady, onTap }) {
       // --- SLUT (kvitteringens position EFTER man tapper) ---
       slutAfstand: 0.6, // meter fra kameraet (mindre tal = tættere på)
       slutForskydX: 0.0, // sidelæns: + = mod højre, - = mod venstre
-      slutForskydY: 0.7, // lodret:  + = op,        - = ned
-      slutDrejGrader: 0, // drej modellen hvis den vender forkert (prøv 180)
+      slutForskydY: 0.2, // lodret:  + = op,        - = ned
+      slutDrejGrader: 90, // drej modellen hvis den vender forkert (prøv 180)
       glideHastighed: 0.12, // hvor hurtigt den glider hen (0.05 = blødt, 0.3 = hurtigt)
     }
 
