@@ -31,6 +31,12 @@ export default function ARScene({ onReady, onTap }) {
     const clock = new THREE.Clock()
     let stopped = false
 
+    // --- Tween-state til "kom tættere på" ved tap ---
+    const targetPos = new THREE.Vector3()
+    const targetQuat = new THREE.Quaternion()
+    const _aim = new THREE.Object3D() // hjælpeobjekt til at beregne rotation
+    let moving = false
+
     // --- Gyroskop-state ---
     let deviceOrientation = null
     let screenOrientation = getScreenOrientation()
@@ -66,6 +72,15 @@ export default function ARScene({ onReady, onTap }) {
       raycaster.setFromCamera(pointer, camera)
       const hits = raycaster.intersectObject(model, true)
       if (hits.length > 0) {
+        // Flyt modellen hen ca. 0,6 m lige foran kameraet, vendt mod dig
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+        targetPos.copy(forward.multiplyScalar(0.6))
+        _aim.position.copy(targetPos)
+        _aim.up.set(0, 1, 0)
+        _aim.lookAt(0, 0, 0) // origo = kameraet
+        targetQuat.copy(_aim.quaternion)
+        moving = true
+
         playAnimation()
         cb.current.onTap?.()
       }
@@ -93,10 +108,21 @@ export default function ARScene({ onReady, onTap }) {
       // Placér modellen én gang, 1 m foran den retning kameraet pegede ved start
       if (!placed && model && (deviceOrientation || allowFallbackPlace)) {
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
-        model.position.copy(forward.multiplyScalar(1.0)) // 1.0 = ca. 1 meter
+        model.position.copy(forward.multiplyScalar(2.0)) // 2.0 = ca. 2 meter
         model.position.y -= 0.2 // lidt under øjenhøjde
         model.visible = true
         placed = true
+      }
+
+      // Glid hen foran kameraet når man har tappet
+      if (moving && model) {
+        model.position.lerp(targetPos, 0.12)
+        model.quaternion.slerp(targetQuat, 0.12)
+        if (model.position.distanceTo(targetPos) < 0.01) {
+          model.position.copy(targetPos)
+          model.quaternion.copy(targetQuat)
+          moving = false
+        }
       }
 
       if (mixer) mixer.update(clock.getDelta())
