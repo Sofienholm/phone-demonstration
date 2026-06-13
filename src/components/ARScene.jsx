@@ -2,21 +2,7 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-/**
- * Markerløs AR (3DOF):
- *  - Kameraet vises som baggrund (getUserMedia).
- *  - three-kameraet roteres af telefonens gyroskop (deviceorientation).
- *  - Modellen placeres ÉN gang foran dig og bliver liggende i rummet —
- *    drejer du telefonen væk og tilbage, er den der stadig.
- *  - Tap PÅ modellen: afspiller animationen OG glider tæt på, vendt mod dig.
- *
- *  >>> Alle tal du normalt vil ændre (afstand, størrelse, slutposition osv.)
- *      ligger samlet i SETTINGS-blokken lige inde i useEffect nedenfor. <<<
- *
- * Props:
- *  - onReady(): kamera + model klar
- *  - onTap():   brugeren tappede på modellen
- */
+
 export default function ARScene({ onReady, onTap, onFinished }) {
   const containerRef = useRef(null)
   const cb = useRef({ onReady, onTap, onFinished })

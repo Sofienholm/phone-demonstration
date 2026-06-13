@@ -33,19 +33,6 @@
   box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
 }
 
-/* Lille "hale" i bunden af boblen (peger ned mod venstre) */
-.bubble::after {
-  content: '';
-  position: absolute;
-  left: 54px;
-  bottom: -10px;
-  width: 26px;
-  height: 26px;
-  background: #2e4a6b;
-  border-radius: 0 0 0 8px;
-  transform: rotate(45deg);
-}
-
 /* ── "?"-boble nederst til venstre ── */
 .qmark {
   position: absolute;
@@ -81,7 +68,7 @@
 }
 
 .counter--done {
-  background: #3aa657; /* grøn når man har fundet noget */
+  background: #d4621f; /* grøn når man har fundet noget */
 }
 
 /* ── Dekorative stjerner / atomer ── */
