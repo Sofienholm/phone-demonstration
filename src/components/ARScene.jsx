@@ -37,7 +37,12 @@ export default function ARScene({ onReady, onTap }) {
       slutAfstand: 0.6, // meter fra kameraet (mindre tal = tættere på)
       slutForskydX: 0.0, // sidelæns: + = mod højre, - = mod venstre
       slutForskydY: 0.2, // lodret:  + = op,        - = ned
-      slutDrejGrader: 90, // drej modellen hvis den vender forkert (prøv 180)
+
+      // Modellen ligger FLADT/vandret ved start. Disse to REJSER den op,
+      // så man kan læse kvitteringen når den er kommet tæt på:
+      slutVipGrader: 90, // VIP op fra vandret -> lodret (prøv 90 eller -90)
+      slutDrejGrader: 0, // drej om lodret akse hvis fladen vender forkert (prøv 180)
+
       glideHastighed: 0.12, // hvor hurtigt den glider hen (0.05 = blødt, 0.3 = hurtigt)
     }
 
@@ -114,7 +119,19 @@ export default function ARScene({ onReady, onTap }) {
         _aim.lookAt(0, 0, 0)
         targetQuat.copy(_aim.quaternion)
 
-        // Ekstra drejning hvis kvitteringen vender forkert (SETTINGS.slutDrejGrader)
+        // Vip modellen OP fra vandret til lodret, så kvitteringen kan læses
+        // (rotation om modellens egen X-akse — styres af SETTINGS.slutVipGrader)
+        if (SETTINGS.slutVipGrader !== 0) {
+          targetQuat.multiply(
+            new THREE.Quaternion().setFromAxisAngle(
+              new THREE.Vector3(1, 0, 0),
+              THREE.MathUtils.degToRad(SETTINGS.slutVipGrader),
+            ),
+          )
+        }
+
+        // Ekstra spin om lodret akse hvis fladen STADIG vender forkert
+        // (SETTINGS.slutDrejGrader)
         if (SETTINGS.slutDrejGrader !== 0) {
           targetQuat.multiply(
             new THREE.Quaternion().setFromAxisAngle(
