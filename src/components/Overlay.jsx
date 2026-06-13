@@ -1,8 +1,8 @@
 /**
- * Rent visuelt UI-lag ovenpå kameraet. Ingen logik — den får bare
- * at vide om markøren er fundet (found) og om kvitteringen er tappet (tapped).
+ * Rent visuelt UI-lag ovenpå kameraet.
+ * Får kun at vide om modellen er blevet tappet.
  */
-export default function Overlay({ found, tapped }) {
+export default function Overlay({ tapped }) {
   return (
     <div className="overlay">
       <div className="overlay__instruction">
@@ -16,8 +16,10 @@ export default function Overlay({ found, tapped }) {
           {tapped ? '1/1 FUNDET' : '0/1 FUNDET'}
         </div>
 
-        {found && !tapped && (
-          <div className="overlay__hint">Tryk på kvitteringen</div>
+        {!tapped && (
+          <div className="overlay__hint">
+            Tryk på kvitteringen for at starte animationen
+          </div>
         )}
       </div>
     </div>

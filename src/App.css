@@ -83,3 +83,50 @@
   text-align: center;
   padding: 24px;
 }
+
+/* START-skærm (vises før kameraet starter) */
+.start-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 32px;
+  text-align: center;
+  color: #fff;
+  background: radial-gradient(circle at 50% 30%, #2a2a3a, #000);
+}
+
+.start-screen h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.start-screen p {
+  margin: 0;
+  max-width: 320px;
+  font-size: 16px;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+.start-button {
+  margin-top: 8px;
+  padding: 16px 48px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fff;
+  background: #aa3bff;
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(170, 59, 255, 0.5);
+  cursor: pointer;
+}
+
+.start-button:active {
+  transform: scale(0.96);
+}

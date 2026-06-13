@@ -1,125 +1,213 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { MindARThree } from 'mind-ar/dist/mindar-image-three.prod.js'
 
 /**
- * ARScene starter kameraet, tracker billed-markøren (targets.mind),
- * viser GLB-modellen ovenpå markøren og afspiller dens animation ved tap.
+ * Markerløs AR (3DOF):
+ *  - Kameraet vises som baggrund (getUserMedia).
+ *  - three-kameraet roteres af telefonens gyroskop (deviceorientation).
+ *  - Modellen placeres ÉN gang ca. 1 meter foran dig og bliver liggende
+ *    i rummet — drejer du telefonen væk og tilbage, er den der stadig.
+ *  - Tap PÅ modellen afspiller GLB-animationen.
  *
- * Props (callbacks til UI'en i App):
- *  - onReady():  kaldes når kamera + model er klar
- *  - onFound():  kaldes når markøren kommer i syne
- *  - onLost():   kaldes når markøren forsvinder
- *  - onTap():    kaldes når brugeren tapper PÅ kvitteringen
+ * Props:
+ *  - onReady(): kamera + model klar
+ *  - onTap():   brugeren tappede på modellen
  */
-export default function ARScene({ onReady, onFound, onLost, onTap }) {
+export default function ARScene({ onReady, onTap }) {
   const containerRef = useRef(null)
-
-  // Gem callbacks i refs, så useEffect kun kører én gang (ikke ved hver render)
-  const cb = useRef({ onReady, onFound, onLost, onTap })
-  cb.current = { onReady, onFound, onLost, onTap }
+  const cb = useRef({ onReady, onTap })
+  cb.current = { onReady, onTap }
 
   useEffect(() => {
-    let mindarThree
-    let action = null // animationen vi afspiller ved tap
-    let model = null
+    const container = containerRef.current
+    let renderer, scene, camera
     let mixer = null
+    let action = null
+    let model = null
+    let stream = null
+    let placed = false
+    let allowFallbackPlace = false
     const clock = new THREE.Clock()
     let stopped = false
 
+    // --- Gyroskop-state ---
+    let deviceOrientation = null
+    let screenOrientation = getScreenOrientation()
+    const onDeviceOrientation = (e) => {
+      if (e.alpha === null || e.alpha === undefined) return
+      deviceOrientation = e
+    }
+    const onScreenOrientation = () => {
+      screenOrientation = getScreenOrientation()
+    }
+
+    // --- Kamera-video som baggrund ---
+    const video = document.createElement('video')
+    video.setAttribute('playsinline', '') // ellers åbner iOS video i fullscreen
+    video.muted = true
+    Object.assign(video.style, {
+      position: 'absolute',
+      inset: '0',
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+    })
+    container.appendChild(video)
+
+    const raycaster = new THREE.Raycaster()
+    const pointer = new THREE.Vector2()
+
+    const handleTap = (event) => {
+      if (!model || !placed) return
+      const rect = renderer.domElement.getBoundingClientRect()
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+      raycaster.setFromCamera(pointer, camera)
+      const hits = raycaster.intersectObject(model, true)
+      if (hits.length > 0) {
+        playAnimation()
+        cb.current.onTap?.()
+      }
+    }
+
+    const playAnimation = () => {
+      if (!action) return
+      action.reset()
+      action.play()
+    }
+
+    const onResize = () => {
+      if (!renderer || !camera) return
+      camera.aspect = window.innerWidth / window.innerHeight
+      camera.updateProjectionMatrix()
+      renderer.setSize(window.innerWidth, window.innerHeight)
+    }
+
+    const loop = () => {
+      // Roter kameraet med telefonen
+      if (deviceOrientation) {
+        setCameraQuaternion(camera.quaternion, deviceOrientation, screenOrientation)
+      }
+
+      // Placér modellen én gang, 1 m foran den retning kameraet pegede ved start
+      if (!placed && model && (deviceOrientation || allowFallbackPlace)) {
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+        model.position.copy(forward.multiplyScalar(1.0)) // 1.0 = ca. 1 meter
+        model.position.y -= 0.2 // lidt under øjenhøjde
+        model.visible = true
+        placed = true
+      }
+
+      if (mixer) mixer.update(clock.getDelta())
+      if (renderer) renderer.render(scene, camera)
+    }
+
     const start = async () => {
-      mindarThree = new MindARThree({
-        container: containerRef.current,
-        imageTargetSrc: '/targets.mind',
-        // Vi laver vores egen overlay, så slå MindARs indbyggede UI fra
-        uiScanning: false,
-        uiLoading: false,
-        uiError: false,
+      // Bagkamera
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: false,
       })
+      video.srcObject = stream
+      await video.play()
 
-      const { renderer, scene, camera } = mindarThree
+      // three-opsætning (kameraet bliver i origo og roterer kun)
+      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+      renderer.setSize(window.innerWidth, window.innerHeight)
+      renderer.setClearAlpha(0) // gennemsigtig, så kamera-videoen ses bagved
+      Object.assign(renderer.domElement.style, { position: 'absolute', inset: '0' })
+      container.appendChild(renderer.domElement)
 
-      // Lys så modellen kan ses
+      scene = new THREE.Scene()
+      camera = new THREE.PerspectiveCamera(
+        70,
+        window.innerWidth / window.innerHeight,
+        0.01,
+        1000,
+      )
+
       scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1.2))
       const dir = new THREE.DirectionalLight(0xffffff, 1.0)
       dir.position.set(1, 2, 1)
       scene.add(dir)
 
-      // Anchor 0 = første (eneste) billede i targets.mind
-      const anchor = mindarThree.addAnchor(0)
-
-      // Indlæs GLB
+      // Model
       const gltf = await new GLTFLoader().loadAsync('/kvi4.glb')
       model = gltf.scene
-      model.scale.set(0.5, 0.5, 0.5) // juster hvis modellen er for stor/lille
-      model.position.set(0, 0, 0)
-      anchor.group.add(model)
+      model.scale.set(0.5, 0.5, 0.5) // juster hvis den er for stor/lille
+      model.visible = false // skjult indtil den placeres
+      scene.add(model)
 
-      // Forbered animationen (afspilles først ved tap)
       if (gltf.animations.length > 0) {
         mixer = new THREE.AnimationMixer(model)
         action = mixer.clipAction(gltf.animations[0])
         action.loop = THREE.LoopOnce
-        action.clampWhenFinished = true // bliv på sidste frame i stedet for at hoppe tilbage
+        action.clampWhenFinished = true
       }
 
-      // Marker fundet / mistet -> opdater UI
-      anchor.onTargetFound = () => cb.current.onFound?.()
-      anchor.onTargetLost = () => cb.current.onLost?.()
-
-      // Tap-til-afspil via raycast mod modellen
-      const raycaster = new THREE.Raycaster()
-      const pointer = new THREE.Vector2()
-      const handleTap = (event) => {
-        if (!model) return
-        const rect = renderer.domElement.getBoundingClientRect()
-        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
-        raycaster.setFromCamera(pointer, camera)
-        const hits = raycaster.intersectObject(model, true)
-        if (hits.length > 0) {
-          playAnimation()
-          cb.current.onTap?.()
-        }
-      }
+      window.addEventListener('deviceorientation', onDeviceOrientation)
+      window.addEventListener('orientationchange', onScreenOrientation)
+      window.addEventListener('resize', onResize)
       renderer.domElement.addEventListener('pointerdown', handleTap)
-      cleanupTap = () =>
-        renderer.domElement.removeEventListener('pointerdown', handleTap)
 
-      const playAnimation = () => {
-        if (!action) return
-        action.reset()
-        action.play()
-      }
+      // Fallback (fx desktop uden gyroskop): placér ligeud efter kort tid
+      setTimeout(() => {
+        allowFallbackPlace = true
+      }, 800)
 
-      await mindarThree.start() // beder om kamera-tilladelse og starter tracking
       if (stopped) return
       cb.current.onReady?.()
-
-      renderer.setAnimationLoop(() => {
-        if (mixer) mixer.update(clock.getDelta())
-        renderer.render(scene, camera)
-      })
+      renderer.setAnimationLoop(loop)
     }
 
-    let cleanupTap = () => {}
     start().catch((err) => {
       console.error('AR kunne ikke starte:', err)
-      alert('AR kunne ikke starte: ' + (err?.message || err))
+      alert('Kunne ikke starte kamera/sensor: ' + (err?.message || err))
     })
 
     return () => {
       stopped = true
-      cleanupTap()
-      try {
-        mindarThree?.renderer?.setAnimationLoop(null)
-        mindarThree?.stop() // slukker kameraet
-      } catch {
-        // ignorer hvis det aldrig nåede at starte
+      renderer?.setAnimationLoop(null)
+      window.removeEventListener('deviceorientation', onDeviceOrientation)
+      window.removeEventListener('orientationchange', onScreenOrientation)
+      window.removeEventListener('resize', onResize)
+      renderer?.domElement?.removeEventListener('pointerdown', handleTap)
+      stream?.getTracks().forEach((t) => t.stop()) // sluk kameraet
+      if (renderer) {
+        renderer.dispose()
+        renderer.domElement?.remove()
       }
+      video.remove()
     }
   }, [])
 
   return <div ref={containerRef} className="ar-container" />
+}
+
+// --- Hjælpere til gyroskop-rotation (samme matematik som three's
+//     DeviceOrientationControls, inlinet så vi ikke afhænger af den fil) ---
+
+function getScreenOrientation() {
+  const angle =
+    (typeof screen !== 'undefined' && screen.orientation && screen.orientation.angle) ??
+    window.orientation ??
+    0
+  return THREE.MathUtils.degToRad(angle)
+}
+
+const _zee = new THREE.Vector3(0, 0, 1)
+const _euler = new THREE.Euler()
+const _q0 = new THREE.Quaternion()
+const _q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)) // -90° om x
+
+function setCameraQuaternion(quaternion, e, orient) {
+  const alpha = THREE.MathUtils.degToRad(e.alpha) // z
+  const beta = THREE.MathUtils.degToRad(e.beta) // x
+  const gamma = THREE.MathUtils.degToRad(e.gamma) // y
+  _euler.set(beta, alpha, -gamma, 'YXZ')
+  quaternion.setFromEuler(_euler)
+  quaternion.multiply(_q1) // kig mod horisonten i stedet for jorden
+  quaternion.multiply(_q0.setFromAxisAngle(_zee, -orient)) // tag højde for skærmrotation
 }
