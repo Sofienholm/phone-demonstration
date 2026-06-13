@@ -40,7 +40,7 @@ export default function ARScene({ onReady, onTap }) {
 
       // Modellen ligger FLADT/vandret ved start. Disse to REJSER den op,
       // så man kan læse kvitteringen når den er kommet tæt på:
-      slutVipGrader: 90, // VIP op fra vandret -> lodret (prøv 90 eller -90)
+      slutVipGrader: -90, // VIP op fra vandret -> lodret (prøv 90 eller -90)
       slutDrejGrader: 0, // drej om lodret akse hvis fladen vender forkert (prøv 180)
 
       glideHastighed: 0.12, // hvor hurtigt den glider hen (0.05 = blødt, 0.3 = hurtigt)
