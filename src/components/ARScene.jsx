@@ -34,7 +34,7 @@ export default function ARScene({ onReady, onTap }) {
       skala: 0.5, // modellens størrelse (samme på alle akser)
 
       // --- SLUT (kvitteringens position EFTER man tapper) ---
-      slutAfstand: 0.6, // meter fra kameraet (mindre tal = tættere på)
+      slutAfstand: 1.0, // meter fra kameraet (mindre tal = tættere på)
       slutForskydX: 0.0, // sidelæns: + = mod højre, - = mod venstre
       slutForskydY: 0.2, // lodret:  + = op,        - = ned
 
