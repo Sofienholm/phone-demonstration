@@ -44,7 +44,7 @@
 .final__image {
   max-width: 70%;
   height: auto;
-  transform: rotate(6deg); /* let skævt som i mockup */
+  /* transform: rotate(6deg); let skævt som i mockup */
   filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.18));
 }
 
