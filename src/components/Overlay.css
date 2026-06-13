@@ -1,0 +1,140 @@
+/* ───────── UI-overlay ovenpå kameraet ─────────
+   pointer-events: none, så tap går videre til 3D-canvas/raycaster.
+   Farver/tekst-størrelser er samlet her så du nemt kan justere. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Topområdet som holder boble, pille og dekorationer */
+.overlay__top {
+  position: relative;
+  padding: calc(env(safe-area-inset-top) + 16px) 16px 0;
+  min-height: 230px;
+}
+
+/* ── Mørkeblå taleboble ── */
+.bubble {
+  position: relative;
+  max-width: 440px;
+  margin: 0 auto;
+  background: #2e4a6b; /* mørkeblå */
+  color: #fff;
+  font-weight: 800;
+  font-size: 21px;
+  line-height: 1.25;
+  letter-spacing: 0.5px;
+  text-align: center;
+  padding: 22px 24px;
+  border-radius: 24px;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+}
+
+/* Lille "hale" i bunden af boblen (peger ned mod venstre) */
+.bubble::after {
+  content: '';
+  position: absolute;
+  left: 54px;
+  bottom: -10px;
+  width: 26px;
+  height: 26px;
+  background: #2e4a6b;
+  border-radius: 0 0 0 8px;
+  transform: rotate(45deg);
+}
+
+/* ── "?"-boble nederst til venstre ── */
+.qmark {
+  position: absolute;
+  left: 22px;
+  top: 150px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 800;
+  color: #cf6a2b; /* orange ? */
+  background: #ece9e3; /* lys "sky" */
+  border-radius: 50%;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+}
+
+/* ── Orange tæller-pille ── */
+.counter {
+  position: absolute;
+  right: 18px;
+  top: 150px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: #d4621f; /* orange */
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+  transition: background 0.3s ease;
+}
+
+.counter--done {
+  background: #3aa657; /* grøn når man har fundet noget */
+}
+
+/* ── Dekorative stjerner / atomer ── */
+.deco {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Blå sparkles */
+.deco--star-tr1 {
+  color: #2b5b95;
+  width: 34px;
+  height: 34px;
+  top: 30px;
+  right: 14px;
+}
+.deco--star-tr2 {
+  color: #2b5b95;
+  width: 22px;
+  height: 22px;
+  top: 64px;
+  right: 52px;
+}
+.deco--star-r {
+  color: #cf6a2b;
+  opacity: 0.5;
+  width: 26px;
+  height: 26px;
+  top: 150px;
+  right: 0;
+}
+.deco--star-bl {
+  color: #2b5b95;
+  width: 20px;
+  height: 20px;
+  left: 70px;
+  top: 150px;
+}
+
+/* Svage grå atom-doodles */
+.deco--atom-tr {
+  color: #aeaaa1;
+  opacity: 0.55;
+  width: 40px;
+  height: 40px;
+  top: 36px;
+  right: 60px;
+}
+.deco--atom-bl {
+  color: #aeaaa1;
+  opacity: 0.5;
+  width: 44px;
+  height: 44px;
+  left: 8px;
+  top: 196px;
+}
