@@ -10,15 +10,6 @@ import './FinalScreen.css'
 export default function FinalScreen() {
   return (
     <div className="final">
-      {/* lille atom-tegning øverst til venstre (fra mockup) */}
-      <svg className="final__atom" viewBox="0 0 60 60" aria-hidden="true">
-        <g fill="none" stroke="#9a958c" strokeWidth="1.3">
-          <ellipse cx="30" cy="30" rx="22" ry="9" />
-          <ellipse cx="30" cy="30" rx="22" ry="9" transform="rotate(60 30 30)" />
-          <ellipse cx="30" cy="30" rx="22" ry="9" transform="rotate(120 30 30)" />
-          <circle cx="30" cy="30" r="3" fill="#9a958c" />
-        </g>
-      </svg>
 
       <h1 className="final__title">EN MYSTISK REGNING??</h1>
 
